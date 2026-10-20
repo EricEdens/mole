@@ -4,6 +4,7 @@
 const Bytes = @This();
 
 const std = @import("std");
+const Stat = @import("idl.zig").Stat;
 
 pub const ArrayListBytes = @import("Bytes/ArrayListBytes.zig");
 
@@ -34,10 +35,6 @@ pub const VTable = struct {
 
     /// Grow or truncate the storage.
     resize: *const fn (ptr: *anyopaque, new_size: usize) ResizeError!void,
-};
-
-pub const Stat = struct {
-    size: u64,
 };
 
 pub const ReadResult = struct {
@@ -81,7 +78,7 @@ pub fn setSize(self: Bytes, new_size: usize) ResizeError!void {
 }
 
 pub fn stat(self: Bytes) StatError!Stat {
-    return .{ .size = self.vtable.getSize(self.ptr) };
+    return .{ .kind = .lockbytes, .size = self.vtable.getSize(self.ptr) };
 }
 
 pub const ReadError = error{};
