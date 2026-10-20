@@ -32,6 +32,7 @@ pub fn interface(self: *ArrayListBytes) Bytes {
         .sync = sync,
         .getSize = getSize,
         .resize = resize,
+        .close = deinit,
     } };
 }
 

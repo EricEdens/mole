@@ -35,6 +35,8 @@ pub const VTable = struct {
 
     /// Grow or truncate the storage.
     resize: *const fn (ptr: *anyopaque, new_size: usize) ResizeError!void,
+
+    close: *const fn (ptr: *anyopaque) void,
 };
 
 pub const ReadResult = struct {
@@ -79,6 +81,10 @@ pub fn setSize(self: Bytes, new_size: usize) ResizeError!void {
 
 pub fn stat(self: Bytes) StatError!Stat {
     return .{ .kind = .lockbytes, .size = self.vtable.getSize(self.ptr) };
+}
+
+pub fn close(self: Bytes) void {
+    self.vtable.close(self.ptr);
 }
 
 pub const ReadError = error{};
