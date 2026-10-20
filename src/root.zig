@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub const ILockBytes = @import("ILockBytes.zig");
+pub const Bytes = @import("Bytes.zig");
 pub const IStorage = @import("IStorage.zig");
 pub const IStream = @import("IStream.zig");
 
