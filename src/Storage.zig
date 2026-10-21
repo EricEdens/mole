@@ -5,48 +5,48 @@
 const Storage = @This();
 
 const std = @import("std");
-const Bytes = @import("Bytes.zig");
+const Buffer = @import("Buffer.zig");
 const idl = @import("idl.zig");
 const IStream = @import("IStream.zig");
 const Name = @import("Name.zig");
 
-bytes: Bytes,
+buffer: Buffer,
 
 pub const OpenError = error{};
 
-/// Opens 'bytes' and interprets it as an existing MS-CFB file.
+/// Opens 'buffer' and interprets it as an existing MS-CFB file.
 ///
 /// This handles the behavior of the classic stg openers:
 ///   * Classic via filename: [StgOpenStorage](https://learn.microsoft.com/en-us/windows/win32/api/coml2api/nf-coml2api-stgopenstorage)
 ///   * New via filename: [StgOpenStorageEx](https://learn.microsoft.com/en-us/windows/win32/api/coml2api/nf-coml2api-stgopenstorageex)
 ///   * From arbitrary ILockBytes: [StgOpenStorageOnILockBytes](https://learn.microsoft.com/en-us/windows/win32/api/coml2api/nf-coml2api-stgopenstorageonilockbytes).
-pub fn open(bytes: Bytes) OpenError!Storage {
-    _ = bytes;
+pub fn open(buffer: Buffer) OpenError!Storage {
+    _ = buffer;
 }
 
 pub const CreateError = error{};
 
-/// Creates a new MS-CFB file, backed by 'bytes'.
+/// Creates a new MS-CFB file, backed by 'buffer'.
 ///
 /// This handles the behavior of the classic stg creators:
 ///   * Classic via filename: [StgCreateDocfile](https://learn.microsoft.com/en-us/windows/win32/api/coml2api/nf-coml2api-stgcreatedocfile)
 ///   * New via filename: [StgCreateStorageEx](https://learn.microsoft.com/en-us/windows/win32/api/coml2api/nf-coml2api-stgcreatestorageex)
 ///   * From arbitrary ILockBytes: [StgCreateDocfileOnILockBytes](https://learn.microsoft.com/en-us/windows/win32/api/coml2api/nf-coml2api-stgcreatedocfileonilockbytes).
-pub fn create(bytes: Bytes, options: CreateOptions) CreateError!Storage {
-    _ = bytes;
+pub fn create(buffer: Buffer, options: CreateOptions) CreateError!Storage {
+    _ = buffer;
     _ = options;
 }
 
 pub fn close(self: Storage) void {
-    self.bytes.close();
-    self.bytes = undefined;
+    self.buffer.close();
+    self.buffer = undefined;
 }
 
 pub const FlushError = error{};
 
 /// [IStorage::Commit](https://learn.microsoft.com/en-us/windows/win32/api/objidl/nf-objidl-istorage-commit)
 pub fn flush(self: Storage) FlushError!void {
-    return self.bytes.flush();
+    return self.buffer.flush();
 }
 
 pub const OpenElementError = error{};
@@ -60,7 +60,7 @@ pub fn openStream(self: Storage, name: Name) OpenElementError!IStream {
 /// [IStorage::OpenStorage](https://learn.microsoft.com/en-us/windows/win32/api/objidl/nf-objidl-istorage-openstorage)
 pub fn openStorage(self: Storage, name: Name) OpenElementError!Storage {
     // TODO: This makes it really clear that we'll need an indirection,
-    // since the nested storage isn' re-parsing bytes. So, maybe another
+    // since the nested storage isn' re-parsing buffer. So, maybe another
     // vtable? :(
     _ = self;
     _ = name;

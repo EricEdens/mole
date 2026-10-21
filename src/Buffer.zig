@@ -1,25 +1,25 @@
 //! Our version of 'ILockBytes'.
 //!
 //! https://learn.microsoft.com/en-us/windows/win32/api/objidl/nn-objidl-ilockbytes
-const Bytes = @This();
+const Buffer = @This();
 
 const std = @import("std");
 const Stat = @import("idl.zig").Stat;
 
-pub const ArrayListBytes = @import("Bytes/ArrayListBytes.zig");
+pub const ArrayListBuffer = @import("Buffer/ArrayListBuffer.zig");
 
 ptr: *anyopaque,
 vtable: *const VTable,
 
 pub const VTable = struct {
-    /// Write data from Bytes into 'buffer'.
+    /// Write data from Buffer into 'buffer'.
     ///
     /// Notes:
     ///   * You don't have to fill the buffer.
     ///   * Above the vtable we validate that everything fits.
     readPositional: *const fn (ptr: *anyopaque, buffer: []u8, offset: u64) ReadError!usize,
 
-    /// Write data from 'buffer' into the Bytes.
+    /// Write data from 'buffer' into the Buffer.
     ///
     /// Same notes as readPositional.
     writePositional: *const fn (ptr: *anyopaque, buffer: []const u8, offset: u64) WriteError!usize,
@@ -49,7 +49,7 @@ pub const WriteResult = struct {
     err: ?WriteError = null,
 };
 
-pub fn readAt(self: Bytes, buffer: []u8, offset: u64) ReadResult {
+pub fn readAt(self: Buffer, buffer: []u8, offset: u64) ReadResult {
     // TODO: check capacity. the vtable is infallible here.
     // TODO: re-drive on short reads. ILockBytes::ReadAt
     // only allows short-reads if: there was an error or you've reached
@@ -61,7 +61,7 @@ pub fn readAt(self: Bytes, buffer: []u8, offset: u64) ReadResult {
     }
 }
 
-pub fn writeAt(self: Bytes, buffer: []const u8, offset: u64) WriteResult {
+pub fn writeAt(self: Buffer, buffer: []const u8, offset: u64) WriteResult {
     // TODO: check capacity and grow if needed. the vtable is infallible here.
     // TODO: re-drive on short writes, similar to readAt.
     if (self.vtable.writePositional(self.ptr, buffer, offset)) |n| {
@@ -71,19 +71,19 @@ pub fn writeAt(self: Bytes, buffer: []const u8, offset: u64) WriteResult {
     }
 }
 
-pub fn flush(self: Bytes) SyncError!void {
+pub fn flush(self: Buffer) SyncError!void {
     return self.vtable.sync(self.ptr);
 }
 
-pub fn setSize(self: Bytes, new_size: usize) ResizeError!void {
+pub fn setSize(self: Buffer, new_size: usize) ResizeError!void {
     return self.vtable.resize(self.ptr, new_size);
 }
 
-pub fn stat(self: Bytes) StatError!Stat {
+pub fn stat(self: Buffer) StatError!Stat {
     return .{ .kind = .lockbytes, .size = self.vtable.getSize(self.ptr) };
 }
 
-pub fn close(self: Bytes) void {
+pub fn close(self: Buffer) void {
     self.vtable.close(self.ptr);
 }
 

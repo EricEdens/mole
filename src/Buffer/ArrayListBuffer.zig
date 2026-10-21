@@ -1,4 +1,4 @@
-//! A slow, but simple, implementation of Bytes.
+//! A slow, but simple, implementation of Buffer.
 //!
 //! std.ArrayList is the basis, and it's a really strong basis
 //! because it provides the precise api that we need. The
@@ -6,26 +6,26 @@
 //! that ArrayList most likely will do N-squared copies as it
 //! grows.
 
-const ArrayListBytes = @This();
+const ArrayListBuffer = @This();
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
-const Bytes = @import("../Bytes.zig");
+const Buffer = @import("../Buffer.zig");
 const testing = std.testing;
 
 allocator: Allocator,
 list: std.ArrayList(u8) = .empty,
 
-pub fn init(allocator: Allocator) ArrayListBytes {
+pub fn init(allocator: Allocator) ArrayListBuffer {
     return .{ .allocator = allocator };
 }
 
-pub fn deinit(self: *ArrayListBytes) void {
+pub fn deinit(self: *ArrayListBuffer) void {
     self.list.deinit(self.allocator);
     self.* = undefined;
 }
 
-pub fn interface(self: *ArrayListBytes) Bytes {
+pub fn interface(self: *ArrayListBuffer) Buffer {
     return .{ .ptr = self, .vtable = &.{
         .readPositional = readPositional,
         .writePositional = writePositional,
@@ -36,8 +36,8 @@ pub fn interface(self: *ArrayListBytes) Bytes {
     } };
 }
 
-fn readPositional(ptr: *anyopaque, buffer: []u8, offset: u64) Bytes.ReadError!usize {
-    const self: *ArrayListBytes = @ptrCast(@alignCast(ptr));
+fn readPositional(ptr: *anyopaque, buffer: []u8, offset: u64) Buffer.ReadError!usize {
+    const self: *ArrayListBuffer = @ptrCast(@alignCast(ptr));
     const src = self.list.items[@intCast(offset)..][0..buffer.len];
     // safety: The vtable's contract is that buffer and offset are clamped to
     // the bounds of [0..getSize()].
@@ -46,7 +46,7 @@ fn readPositional(ptr: *anyopaque, buffer: []u8, offset: u64) Bytes.ReadError!us
 }
 
 test readPositional {
-    var a = ArrayListBytes.init(testing.allocator);
+    var a = ArrayListBuffer.init(testing.allocator);
     defer a.deinit();
     try resize(&a, 1024);
 
@@ -60,8 +60,8 @@ test readPositional {
     try testing.expectEqualSlices(u8, &content, &actual);
 }
 
-fn writePositional(ptr: *anyopaque, buffer: []const u8, offset: u64) Bytes.WriteError!usize {
-    const self: *ArrayListBytes = @ptrCast(@alignCast(ptr));
+fn writePositional(ptr: *anyopaque, buffer: []const u8, offset: u64) Buffer.WriteError!usize {
+    const self: *ArrayListBuffer = @ptrCast(@alignCast(ptr));
     const dst = self.list.items[@intCast(offset)..][0..buffer.len];
     // safety: The vtable's contract is that buffer and offset are within
     // the bounds of [0..getSize()].
@@ -70,7 +70,7 @@ fn writePositional(ptr: *anyopaque, buffer: []const u8, offset: u64) Bytes.Write
 }
 
 test writePositional {
-    var a = ArrayListBytes.init(testing.allocator);
+    var a = ArrayListBuffer.init(testing.allocator);
     defer a.deinit();
     try resize(&a, 1024);
 
@@ -84,15 +84,15 @@ test writePositional {
     try testing.expect(std.mem.allEqual(u8, a.list.items[612..1024], 0));
 }
 
-fn sync(_: *anyopaque) Bytes.SyncError!void {}
+fn sync(_: *anyopaque) Buffer.SyncError!void {}
 
 fn getSize(ptr: *anyopaque) usize {
-    const self: *ArrayListBytes = @ptrCast(@alignCast(ptr));
+    const self: *ArrayListBuffer = @ptrCast(@alignCast(ptr));
     return self.list.items.len;
 }
 
 test getSize {
-    var a = ArrayListBytes.init(testing.allocator);
+    var a = ArrayListBuffer.init(testing.allocator);
     defer a.deinit();
     var rand = std.Random.DefaultPrng.init(33);
     for (0..100) |_| {
@@ -104,8 +104,8 @@ test getSize {
     }
 }
 
-fn resize(ptr: *anyopaque, new_size: usize) Bytes.ResizeError!void {
-    const self: *ArrayListBytes = @ptrCast(@alignCast(ptr));
+fn resize(ptr: *anyopaque, new_size: usize) Buffer.ResizeError!void {
+    const self: *ArrayListBuffer = @ptrCast(@alignCast(ptr));
     const old_size = self.list.items.len;
     try self.list.resize(self.allocator, new_size);
     if (old_size < new_size) {
@@ -114,7 +114,7 @@ fn resize(ptr: *anyopaque, new_size: usize) Bytes.ResizeError!void {
 }
 
 test resize {
-    var a = ArrayListBytes.init(testing.allocator);
+    var a = ArrayListBuffer.init(testing.allocator);
     defer a.deinit();
     var rand = std.Random.DefaultPrng.init(33);
     for (0..100) |_| {
