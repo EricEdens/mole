@@ -4,7 +4,7 @@
 
 const Stream = @This();
 
-const Cfb = @import("Cfb.zig");
+const Cfb = @import("cfb.zig").Cfb;
 
 cfb: *Cfb,
 stream_id: u32,

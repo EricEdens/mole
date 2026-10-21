@@ -31,10 +31,10 @@ pub const VTable = struct {
     ///
     /// Important: This is infallible, meaning that implementations can't
     /// reach out a backend to get it.
-    getSize: *const fn (ptr: *anyopaque) usize,
+    size: *const fn (ptr: *anyopaque) u64,
 
     /// Grow or truncate the storage.
-    resize: *const fn (ptr: *anyopaque, new_size: usize) ResizeError!void,
+    resize: *const fn (ptr: *anyopaque, new_size: u64) ResizeError!void,
 };
 
 pub const ReadResult = struct {
@@ -73,19 +73,19 @@ pub fn flush(self: Buffer) SyncError!void {
     return self.vtable.sync(self.ptr);
 }
 
-pub fn setSize(self: Buffer, new_size: usize) ResizeError!void {
+pub fn resize(self: Buffer, new_size: u64) ResizeError!void {
     return self.vtable.resize(self.ptr, new_size);
 }
 
-pub fn stat(self: Buffer) StatError!Stat {
-    return .{ .kind = .lockbytes, .size = self.vtable.getSize(self.ptr) };
+pub fn size(self: Buffer) u64 {
+    return self.vtable.size(self.ptr);
 }
 
 pub const ReadError = error{};
 pub const WriteError = error{};
 pub const SyncError = error{};
 pub const StatError = error{};
-pub const ResizeError = error{OutOfMemory};
+pub const ResizeError = error{OutOfStorage};
 
 test {
     std.testing.refAllDecls(@This());

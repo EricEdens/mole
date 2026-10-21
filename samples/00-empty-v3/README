@@ -1,0 +1,3 @@
+A snapshot of what 'StgCreateDocfileOnILockBytes' writes to the ILockBytes
+during its initialization. The idea: Pass in our own ILockBytes,
+create a CFB on top, and write to a file immediately.

@@ -5,7 +5,7 @@
 const Storage = @This();
 
 const std = @import("std");
-const Cfb = @import("Cfb.zig");
+const Cfb = @import("cfb.zig").Cfb;
 const idl = @import("idl.zig");
 const Stream = @import("Stream.zig");
 const Name = @import("Name.zig");

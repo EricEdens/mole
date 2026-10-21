@@ -30,7 +30,7 @@ pub fn buffer(self: *ArrayListBuffer) Buffer {
         .readPositional = readPositional,
         .writePositional = writePositional,
         .sync = sync,
-        .getSize = getSize,
+        .size = getSize,
         .resize = resize,
     } };
 }
@@ -85,7 +85,7 @@ test writePositional {
 
 fn sync(_: *anyopaque) Buffer.SyncError!void {}
 
-fn getSize(ptr: *anyopaque) usize {
+fn getSize(ptr: *anyopaque) u64 {
     const self: *ArrayListBuffer = @ptrCast(@alignCast(ptr));
     return self.list.items.len;
 }
@@ -106,7 +106,7 @@ test getSize {
 fn resize(ptr: *anyopaque, new_size: usize) Buffer.ResizeError!void {
     const self: *ArrayListBuffer = @ptrCast(@alignCast(ptr));
     const old_size = self.list.items.len;
-    try self.list.resize(self.allocator, new_size);
+    self.list.resize(self.allocator, new_size) catch return error.OutOfStorage;
     if (old_size < new_size) {
         @memset(self.list.items[old_size..new_size], 0);
     }
