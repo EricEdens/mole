@@ -37,11 +37,6 @@ pub fn create(buffer: Buffer, options: CreateOptions) CreateError!Storage {
     _ = options;
 }
 
-pub fn close(self: Storage) void {
-    self.buffer.close();
-    self.buffer = undefined;
-}
-
 pub const FlushError = error{};
 
 /// [IStorage::Commit](https://learn.microsoft.com/en-us/windows/win32/api/objidl/nf-objidl-istorage-commit)

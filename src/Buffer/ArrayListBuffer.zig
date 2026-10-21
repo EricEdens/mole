@@ -32,7 +32,6 @@ pub fn interface(self: *ArrayListBuffer) Buffer {
         .sync = sync,
         .getSize = getSize,
         .resize = resize,
-        .close = deinit,
     } };
 }
 
