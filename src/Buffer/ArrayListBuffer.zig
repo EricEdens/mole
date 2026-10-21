@@ -25,7 +25,7 @@ pub fn deinit(self: *ArrayListBuffer) void {
     self.* = undefined;
 }
 
-pub fn interface(self: *ArrayListBuffer) Buffer {
+pub fn buffer(self: *ArrayListBuffer) Buffer {
     return .{ .ptr = self, .vtable = &.{
         .readPositional = readPositional,
         .writePositional = writePositional,
@@ -35,13 +35,13 @@ pub fn interface(self: *ArrayListBuffer) Buffer {
     } };
 }
 
-fn readPositional(ptr: *anyopaque, buffer: []u8, offset: u64) Buffer.ReadError!usize {
+fn readPositional(ptr: *anyopaque, buff: []u8, offset: u64) Buffer.ReadError!usize {
     const self: *ArrayListBuffer = @ptrCast(@alignCast(ptr));
-    const src = self.list.items[@intCast(offset)..][0..buffer.len];
-    // safety: The vtable's contract is that buffer and offset are clamped to
+    const src = self.list.items[@intCast(offset)..][0..buff.len];
+    // safety: The vtable's contract is that buff and offset are clamped to
     // the bounds of [0..getSize()].
-    @memcpy(buffer, src);
-    return buffer.len;
+    @memcpy(buff, src);
+    return buff.len;
 }
 
 test readPositional {
@@ -59,13 +59,13 @@ test readPositional {
     try testing.expectEqualSlices(u8, &content, &actual);
 }
 
-fn writePositional(ptr: *anyopaque, buffer: []const u8, offset: u64) Buffer.WriteError!usize {
+fn writePositional(ptr: *anyopaque, buff: []const u8, offset: u64) Buffer.WriteError!usize {
     const self: *ArrayListBuffer = @ptrCast(@alignCast(ptr));
-    const dst = self.list.items[@intCast(offset)..][0..buffer.len];
-    // safety: The vtable's contract is that buffer and offset are within
+    const dst = self.list.items[@intCast(offset)..][0..buff.len];
+    // safety: The vtable's contract is that buff and offset are within
     // the bounds of [0..getSize()].
-    @memcpy(dst, buffer);
-    return buffer.len;
+    @memcpy(dst, buff);
+    return buff.len;
 }
 
 test writePositional {

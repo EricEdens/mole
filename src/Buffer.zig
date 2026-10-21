@@ -12,17 +12,17 @@ ptr: *anyopaque,
 vtable: *const VTable,
 
 pub const VTable = struct {
-    /// Write data from Buffer into 'buffer'.
+    /// Write data from Buffer into 'buff'.
     ///
     /// Notes:
-    ///   * You don't have to fill the buffer.
+    ///   * You don't have to fill the buff.
     ///   * Above the vtable we validate that everything fits.
-    readPositional: *const fn (ptr: *anyopaque, buffer: []u8, offset: u64) ReadError!usize,
+    readPositional: *const fn (ptr: *anyopaque, buff: []u8, offset: u64) ReadError!usize,
 
-    /// Write data from 'buffer' into the Buffer.
+    /// Write data from 'buff' into the Buffer.
     ///
     /// Same notes as readPositional.
-    writePositional: *const fn (ptr: *anyopaque, buffer: []const u8, offset: u64) WriteError!usize,
+    writePositional: *const fn (ptr: *anyopaque, buff: []const u8, offset: u64) WriteError!usize,
 
     /// Drains bytes to the underlying storage.
     sync: *const fn (ptr: *anyopaque) SyncError!void,
@@ -47,22 +47,22 @@ pub const WriteResult = struct {
     err: ?WriteError = null,
 };
 
-pub fn readAt(self: Buffer, buffer: []u8, offset: u64) ReadResult {
+pub fn readAt(self: Buffer, buff: []u8, offset: u64) ReadResult {
     // TODO: check capacity. the vtable is infallible here.
     // TODO: re-drive on short reads. ILockBytes::ReadAt
     // only allows short-reads if: there was an error or you've reached
     // EOF.
-    if (self.vtable.readPositional(self.ptr, buffer, offset)) |n| {
+    if (self.vtable.readPositional(self.ptr, buff, offset)) |n| {
         return .{ .bytes_read = n };
     } else |err| {
         return .{ .bytes_read = 0, .err = err };
     }
 }
 
-pub fn writeAt(self: Buffer, buffer: []const u8, offset: u64) WriteResult {
+pub fn writeAt(self: Buffer, buff: []const u8, offset: u64) WriteResult {
     // TODO: check capacity and grow if needed. the vtable is infallible here.
     // TODO: re-drive on short writes, similar to readAt.
-    if (self.vtable.writePositional(self.ptr, buffer, offset)) |n| {
+    if (self.vtable.writePositional(self.ptr, buff, offset)) |n| {
         return .{ .bytes_written = n };
     } else |err| {
         return .{ .bytes_written = 0, .err = err };
