@@ -3,14 +3,16 @@ const Difat = @This();
 const Cfb = @import("../cfb.zig").Cfb;
 const SectorId = @import("../cfb.zig").SectorId;
 
+cfb: *const Cfb,
+
 /// The DIFAT's own sector IDs.
 ///
 /// This occurs when the DIFAT spills beyond the first 109
 /// entries of header.
-pub fn sectorIds(self: *const Difat) Iterator {
+pub fn sectorIds(self: Difat) Iterator {
     return .{
-        .n = self.parent().header.firstDifat(),
-        .cfb = self.parent(),
+        .n = self.cfb.header.firstDifat(),
+        .cfb = self.cfb,
     };
 }
 
@@ -31,10 +33,10 @@ pub const Iterator = struct {
 /// Iterate over FAT sector numbers.
 ///
 /// The first element is difat[0] from the CFB header.
-pub fn fatSectorIds(self: *const Difat) FatIterator {
+pub fn fatSectorIds(self: Difat) FatIterator {
     return .{
         .difat = self.sectorIds(),
-        .cfb = self.parent(),
+        .cfb = self.cfb,
     };
 }
 
@@ -78,7 +80,3 @@ pub const FatIterator = struct {
         return id;
     }
 };
-
-fn parent(self: *const Difat) *const Cfb {
-    return @alignCast(@fieldParentPtr("difat", self));
-}

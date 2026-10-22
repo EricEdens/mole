@@ -44,7 +44,6 @@ pub const StreamId = enum(u32) {
 pub const Cfb = struct {
     buffer: Buffer,
     header: Header,
-    difat: Difat = .{},
     fat: Fat = .{},
 
     pub const ReadError = Buffer.ReadError || error{ InvalidSector, InvalidSectorOffset, EndOfStream };
@@ -62,6 +61,10 @@ pub const Cfb = struct {
             else => return error.InvalidHeader,
         }
         return .{ .buffer = buffer, .header = h };
+    }
+
+    pub fn difat(self: *const Cfb) Difat {
+        return .{ .cfb = self };
     }
 
     pub fn sectorSize(self: *const Cfb) u32 {

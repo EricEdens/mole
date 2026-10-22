@@ -12,5 +12,5 @@ pub fn next(self: *const Fat, n: Sect) Sect {
 }
 
 fn parent(self: *const Fat) *const Cfb {
-    return @alignCast(@fieldParentPtr("difat", self));
+    return @alignCast(@fieldParentPtr("fat", self));
 }
