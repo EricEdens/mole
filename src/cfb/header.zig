@@ -1,5 +1,6 @@
 const std = @import("std");
 const Buffer = @import("../Buffer.zig");
+const SectorId = @import("../cfb.zig").SectorId;
 
 pub const Header = extern struct {
     signature: [8]u8,
@@ -20,6 +21,19 @@ pub const Header = extern struct {
     first_difat: u32,
     num_difat: u32,
     difat: [109]u32,
+
+    /// Sector IDs are in native byte order after read().
+    pub fn firstDir(self: Header) SectorId {
+        return SectorId.fromInt(self.first_dir);
+    }
+
+    pub fn firstMiniFat(self: Header) SectorId {
+        return SectorId.fromInt(self.first_mini_fat);
+    }
+
+    pub fn firstDifat(self: Header) SectorId {
+        return SectorId.fromInt(self.first_difat);
+    }
 
     pub fn read(b: Buffer) !Header {
         var h: Header = undefined;
@@ -70,6 +84,9 @@ test "read empty v3 Windows 11 header" {
         .num_difat = 0,
         .difat = .{0} ++ @as([108]u32, @splat(0xffffffff)),
     }, header);
+    try testing.expectEqual(SectorId.fromInt(1), header.firstDir());
+    try testing.expectEqual(SectorId.endofchain, header.firstMiniFat());
+    try testing.expectEqual(SectorId.endofchain, header.firstDifat());
 }
 
 test "read MS-CFB section 3 example header" {
@@ -105,4 +122,7 @@ test "read MS-CFB section 3 example header" {
         .num_difat = 0,
         .difat = .{0} ++ @as([108]u32, @splat(0xffffffff)),
     }, header);
+    try testing.expectEqual(SectorId.fromInt(1), header.firstDir());
+    try testing.expectEqual(SectorId.fromInt(2), header.firstMiniFat());
+    try testing.expectEqual(SectorId.endofchain, header.firstDifat());
 }
