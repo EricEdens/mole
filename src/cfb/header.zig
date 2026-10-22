@@ -26,6 +26,8 @@ pub const Header = extern struct {
         const result = b.readAt(std.mem.asBytes(&h), 0);
         if (result.err) |err| return err;
         if (result.bytes_read != @sizeOf(Header)) return error.EndOfStream;
+        if (@import("builtin").cpu.arch.endian() == .big)
+            std.mem.byteSwap(Header, &h);
         return h;
     }
 };
@@ -64,6 +66,41 @@ test "read empty v3 Windows 11 header" {
         .mini_cutoff = 4096,
         .first_mini_fat = 0xfffffffe,
         .num_mini_fat = 0,
+        .first_difat = 0xfffffffe,
+        .num_difat = 0,
+        .difat = .{0} ++ @as([108]u32, @splat(0xffffffff)),
+    }, header);
+}
+
+test "read MS-CFB section 3 example header" {
+    var buffer = Buffer.ArrayListBuffer.init(testing.allocator);
+    defer buffer.deinit();
+    const contents = try std.Io.Dir.cwd().readFileAlloc(
+        testing.io,
+        "samples/01-ms-cfb/ms-cfb.cfb",
+        testing.allocator,
+        .unlimited,
+    );
+    buffer.list = .fromOwnedSlice(contents);
+    try testing.expectEqual(3072, contents.len);
+
+    const header = try Header.read(buffer.buffer());
+    try testing.expectEqualDeep(Header{
+        .signature = .{ 0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1 },
+        .clsid = @splat(0),
+        .minor_ver = 0x003e,
+        .major_ver = 3,
+        .byte_order = 0xfffe,
+        .sector_shift = 9,
+        .mini_sector_shift = 6,
+        .reserved = @splat(0),
+        .num_dir = 0,
+        .num_fat = 1,
+        .first_dir = 1,
+        .tx_sig = 0,
+        .mini_cutoff = 4096,
+        .first_mini_fat = 2,
+        .num_mini_fat = 1,
         .first_difat = 0xfffffffe,
         .num_difat = 0,
         .difat = .{0} ++ @as([108]u32, @splat(0xffffffff)),
