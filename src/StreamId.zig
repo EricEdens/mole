@@ -4,7 +4,7 @@ pub const StreamId = enum(u32) {
     nostream = 0xffffffff,
     _,
 
-    pub fn is_regular(s: StreamId) bool {
+    pub fn isRegular(s: StreamId) bool {
         return @backingInt(s) <= 0xfffffffa;
     }
 };

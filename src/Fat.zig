@@ -1,16 +1,12 @@
 const Fat = @This();
 
 const Cfb = @import("Cfb.zig");
-const SectorId = @import("SectorId.zig").SectorId;
+const SectorNumber = @import("SectorNumber.zig").SectorNumber;
 
-/// Resolve a sector index along the FAT chain beginning at start.
-pub fn next(self: *const Fat, n: SectorId) SectorId {
-    _ = self;
-    _ = n;
-    // TODO: Walk the FAT sector chain.
-    return error.NotImplemented;
-}
+cfb: *const Cfb,
 
-fn parent(self: *const Fat) *const Cfb {
-    return @alignCast(@fieldParentPtr("fat", self));
+/// Returns FAT[n], the next sector number in the chain after sector #n.
+pub fn nextSectorInChain(self: *const Fat, n: SectorNumber) Cfb.ReadError!SectorNumber {
+    _ = .{ self, n };
+    @panic("TODO");
 }

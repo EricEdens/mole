@@ -5,14 +5,13 @@ const std = @import("std");
 const Difat = @import("Difat.zig");
 const Fat = @import("Fat.zig");
 const Header = @import("header.zig").Header;
-const SectorId = @import("SectorId.zig").SectorId;
+const SectorNumber = @import("SectorNumber.zig").SectorNumber;
 const Source = @import("source.zig").Source;
 
 source: Source,
 header: Header,
-fat: Fat = .{},
 
-pub const ReadError = Source.ReadError || error{ InvalidSector, InvalidSectorOffset, EndOfStream };
+pub const ReadError = Source.ReadError || error{ InvalidSector, EndOfStream };
 pub const OpenError = Header.ReadError || error{InvalidHeader};
 
 pub fn open(source: Source) OpenError!Cfb {
@@ -28,31 +27,51 @@ pub fn open(source: Source) OpenError!Cfb {
     return .{ .source = source, .header = h };
 }
 
-pub fn difat(self: *const Cfb) Difat {
-    return .{ .cfb = self };
+//-- Logical Stats --//
+
+pub fn fileSize(self: *const Cfb) u64 {
+    _ = self;
+    @panic("TODO");
 }
 
-pub fn sectorSize(self: *const Cfb) u32 {
+pub fn bytesPerSector(self: *const Cfb) u32 {
     return @as(u32, 1) << @intCast(self.header.sector_shift);
 }
 
-pub fn readWithinSector(self: *const Cfb, comptime T: type, sector: SectorId, offset: u32) ReadError!T {
-    if (!sector.is_regular()) return error.InvalidSector;
+pub fn bytesPerMiniSector(self: *const Cfb) u32 {
+    return @as(u32, 1) << @intCast(self.header.mini_sector_shift);
+}
 
-    const Int = switch (@typeInfo(T)) {
-        .int => T,
-        else => @compileError("readWithinSector only works on ints"),
-    };
-    const byte_count = @sizeOf(Int);
-    const sector_size = self.sectorSize();
-    if (offset > sector_size or byte_count > sector_size - offset)
-        return error.InvalidSectorOffset;
+pub fn numSectors(self: *const Cfb) u32 {
+    std.math.divCeil(u32, self.source.size() - self.bytesPerSector(), self.bytesPerSector());
+}
 
-    const position = (@as(u64, @backingInt(sector)) + 1) * sector_size + offset;
-    if (position + byte_count > self.source.size()) return error.EndOfStream;
-    var bytes: [byte_count]u8 = undefined;
-    if (try self.source.readAt(&bytes, position) != byte_count) return error.EndOfStream;
-    return std.mem.readInt(Int, &bytes, .little);
+//-- Pointers to start of entities --//
+
+pub fn firstDifat(self: *const Cfb) SectorNumber {
+    return .fromInt(self.header.first_difat);
+}
+
+pub fn firstDir(self: *const Cfb) SectorNumber {
+    return .fromInt(self.header.first_dir);
+}
+
+pub fn firstMiniFat(self: *const Cfb) SectorNumber {
+    return .fromInt(self.header.first_mini_fat);
+}
+
+//-- IO --//
+
+pub fn readSector(self: *const Cfb, sector: SectorNumber, buf: []u8) ReadError!void {
+    std.debug.assert(buf.len == self.bytesPerSector());
+    if (!sector.isRegular()) return error.InvalidSector;
+    const position = (@as(u64, @backingInt(sector)) + 1) * buf.len;
+    if (try self.source.readAt(buf, position) != buf.len) return error.EndOfStream;
+}
+
+pub fn readMiniSector(self: *const Cfb, sector: SectorNumber, buf: []u8) ReadError!void {
+    _ = .{ self, sector, buf };
+    @panic("TODO");
 }
 
 comptime {
@@ -88,15 +107,9 @@ test "read MS-CFB section 3 example" {
         .num_difat = 0,
         .difat = .{0} ++ @as([108]u32, @splat(0xffffffff)),
     }, cfb.header);
-    try testing.expectEqual(SectorId.fromInt(1), cfb.header.firstDir());
-    try testing.expectEqual(SectorId.fromInt(2), cfb.header.firstMiniFat());
-    try testing.expectEqual(SectorId.endofchain, cfb.header.firstDifat());
-    try testing.expectEqual(512, cfb.sectorSize());
-
-    var difat_iter = cfb.difat().sectorIds();
-    try testing.expectEqual(null, try difat_iter.next());
-
-    var fat_iter = cfb.difat().fatSectorIds();
-    try testing.expectEqual(SectorId.fromInt(0), try fat_iter.next());
-    try testing.expectEqual(null, try fat_iter.next());
+    try testing.expectEqual(SectorNumber.fromInt(1), cfb.firstDir());
+    try testing.expectEqual(SectorNumber.fromInt(2), cfb.firstMiniFat());
+    try testing.expectEqual(SectorNumber.endofchain, cfb.firstDifat());
+    try testing.expectEqual(512, cfb.bytesPerSector());
+    try testing.expectEqual(64, cfb.bytesPerMiniSector());
 }
