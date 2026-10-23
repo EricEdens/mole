@@ -1,7 +1,7 @@
 const Difat = @This();
 
-const Cfb = @import("../cfb.zig").Cfb;
-const SectorId = @import("../cfb.zig").SectorId;
+const Cfb = @import("Cfb.zig");
+const SectorId = @import("SectorId.zig").SectorId;
 
 cfb: *const Cfb,
 

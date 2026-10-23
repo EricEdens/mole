@@ -1,6 +1,6 @@
 const std = @import("std");
-const Buffer = @import("../Buffer.zig");
-const SectorId = @import("../cfb.zig").SectorId;
+const Source = @import("source.zig").Source;
+const SectorId = @import("SectorId.zig").SectorId;
 
 pub const Header = extern struct {
     signature: [8]u8,
@@ -35,11 +35,11 @@ pub const Header = extern struct {
         return SectorId.fromInt(self.first_difat);
     }
 
-    pub fn read(b: Buffer) !Header {
+    pub const ReadError = Source.ReadError || error{EndOfStream};
+
+    pub fn read(s: Source) ReadError!Header {
         var h: Header = undefined;
-        const result = b.readAt(std.mem.asBytes(&h), 0);
-        if (result.err) |err| return err;
-        if (result.bytes_read != @sizeOf(Header)) return error.EndOfStream;
+        if (try s.readAt(std.mem.asBytes(&h), 0) != @sizeOf(Header)) return error.EndOfStream;
         if (@import("builtin").cpu.arch.endian() == .big)
             std.mem.byteSwap(Header, &h);
         return h;
@@ -53,17 +53,10 @@ test "Header is 512 bytes" {
 }
 
 test "read empty v3 Windows 11 header" {
-    var buffer = Buffer.ArrayListBuffer.init(testing.allocator);
-    defer buffer.deinit();
-    const contents = try std.Io.Dir.cwd().readFileAlloc(
-        testing.io,
-        "samples/00-empty-v3/win11-24h2-26100.9549-amd64.cfb",
-        testing.allocator,
-        .unlimited,
-    );
-    buffer.list = .fromOwnedSlice(contents);
+    var src: Source = try .fromPath(testing.io, "samples/00-empty-v3/win11-24h2-26100.9549-amd64.cfb");
+    defer src.deinit();
 
-    const header = try Header.read(buffer.buffer());
+    const header = try Header.read(src);
     try testing.expectEqualDeep(Header{
         .signature = .{ 0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1 },
         .clsid = @splat(0),
@@ -90,18 +83,11 @@ test "read empty v3 Windows 11 header" {
 }
 
 test "read MS-CFB section 3 example header" {
-    var buffer = Buffer.ArrayListBuffer.init(testing.allocator);
-    defer buffer.deinit();
-    const contents = try std.Io.Dir.cwd().readFileAlloc(
-        testing.io,
-        "samples/01-ms-cfb/ms-cfb.cfb",
-        testing.allocator,
-        .unlimited,
-    );
-    buffer.list = .fromOwnedSlice(contents);
-    try testing.expectEqual(3072, contents.len);
+    var src: Source = try .fromPath(testing.io, "samples/01-ms-cfb/ms-cfb.cfb");
+    defer src.deinit();
+    try testing.expectEqual(3072, src.size());
 
-    const header = try Header.read(buffer.buffer());
+    const header = try Header.read(src);
     try testing.expectEqualDeep(Header{
         .signature = .{ 0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1 },
         .clsid = @splat(0),

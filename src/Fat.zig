@@ -1,10 +1,10 @@
 const Fat = @This();
 
-const Cfb = @import("../cfb.zig").Cfb;
-const Sect = @import("../cfb.zig").Sect;
+const Cfb = @import("Cfb.zig");
+const SectorId = @import("SectorId.zig").SectorId;
 
 /// Resolve a sector index along the FAT chain beginning at start.
-pub fn next(self: *const Fat, n: Sect) Sect {
+pub fn next(self: *const Fat, n: SectorId) SectorId {
     _ = self;
     _ = n;
     // TODO: Walk the FAT sector chain.

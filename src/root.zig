@@ -1,10 +1,9 @@
 const std = @import("std");
 
-pub const idl = @import("idl.zig");
-pub const Buffer = @import("Buffer.zig");
-pub const Storage = @import("Storage.zig");
-pub const cfb = @import("cfb.zig");
-pub const Stream = @import("Stream.zig");
+pub const Cfb = @import("Cfb.zig");
+pub const SectorId = @import("SectorId.zig").SectorId;
+pub const StreamId = @import("StreamId.zig").StreamId;
+pub const Source = @import("source.zig").Source;
 
 test {
     std.testing.refAllDecls(@This());

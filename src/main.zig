@@ -1,21 +1,14 @@
 const std = @import("std");
-const Io = std.Io;
 
 const stg = @import("stg");
 
 pub fn main(init: std.process.Init) !void {
     const args = (try init.minimal.args.toSlice(init.arena.allocator()))[1..];
 
-    const f = try Io.Dir.cwd().openFile(init.io, args[0], .{});
-    defer f.close(init.io);
-    var b: stg.Buffer.ArrayListBuffer = .init(init.arena.allocator());
+    var src: stg.Source = try .fromPath(init.io, args[0]);
+    defer src.deinit();
 
-    const stat = try f.stat(init.io);
-    try b.buffer().resize(stat.size);
-    const read = try f.readPositionalAll(init.io, b.list.items, 0);
-    std.debug.assert(stat.size == read);
-
-    const cfb = try stg.cfb.Cfb.open(b.buffer());
+    const cfb = try stg.Cfb.open(src);
     std.debug.print("major={d}\n", .{cfb.header.major_ver});
 
     var difat = cfb.difat().sectorIds();
