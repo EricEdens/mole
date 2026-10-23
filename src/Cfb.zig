@@ -59,3 +59,44 @@ comptime {
     _ = Difat;
     _ = @import("DirectoryEntry.zig");
 }
+
+const testing = std.testing;
+
+test "read MS-CFB section 3 example" {
+    var src: Source = try .fromPath(testing.io, "samples/01-ms-cfb/ms-cfb.cfb");
+    defer src.deinit();
+    try testing.expectEqual(3072, src.size());
+
+    const cfb: Cfb = try .open(src);
+    try testing.expectEqualDeep(Header{
+        .signature = .{ 0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1 },
+        .clsid = @splat(0),
+        .minor_ver = 0x003e,
+        .major_ver = 3,
+        .byte_order = 0xfffe,
+        .sector_shift = 9,
+        .mini_sector_shift = 6,
+        .reserved = @splat(0),
+        .num_dir = 0,
+        .num_fat = 1,
+        .first_dir = 1,
+        .tx_sig = 0,
+        .mini_cutoff = 4096,
+        .first_mini_fat = 2,
+        .num_mini_fat = 1,
+        .first_difat = 0xfffffffe,
+        .num_difat = 0,
+        .difat = .{0} ++ @as([108]u32, @splat(0xffffffff)),
+    }, cfb.header);
+    try testing.expectEqual(SectorId.fromInt(1), cfb.header.firstDir());
+    try testing.expectEqual(SectorId.fromInt(2), cfb.header.firstMiniFat());
+    try testing.expectEqual(SectorId.endofchain, cfb.header.firstDifat());
+    try testing.expectEqual(512, cfb.sectorSize());
+
+    var difat_iter = cfb.difat().sectorIds();
+    try testing.expectEqual(null, try difat_iter.next());
+
+    var fat_iter = cfb.difat().fatSectorIds();
+    try testing.expectEqual(SectorId.fromInt(0), try fat_iter.next());
+    try testing.expectEqual(null, try fat_iter.next());
+}

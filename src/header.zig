@@ -81,34 +81,3 @@ test "read empty v3 Windows 11 header" {
     try testing.expectEqual(SectorId.endofchain, header.firstMiniFat());
     try testing.expectEqual(SectorId.endofchain, header.firstDifat());
 }
-
-test "read MS-CFB section 3 example header" {
-    var src: Source = try .fromPath(testing.io, "samples/01-ms-cfb/ms-cfb.cfb");
-    defer src.deinit();
-    try testing.expectEqual(3072, src.size());
-
-    const header = try Header.read(src);
-    try testing.expectEqualDeep(Header{
-        .signature = .{ 0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1 },
-        .clsid = @splat(0),
-        .minor_ver = 0x003e,
-        .major_ver = 3,
-        .byte_order = 0xfffe,
-        .sector_shift = 9,
-        .mini_sector_shift = 6,
-        .reserved = @splat(0),
-        .num_dir = 0,
-        .num_fat = 1,
-        .first_dir = 1,
-        .tx_sig = 0,
-        .mini_cutoff = 4096,
-        .first_mini_fat = 2,
-        .num_mini_fat = 1,
-        .first_difat = 0xfffffffe,
-        .num_difat = 0,
-        .difat = .{0} ++ @as([108]u32, @splat(0xffffffff)),
-    }, header);
-    try testing.expectEqual(SectorId.fromInt(1), header.firstDir());
-    try testing.expectEqual(SectorId.fromInt(2), header.firstMiniFat());
-    try testing.expectEqual(SectorId.endofchain, header.firstDifat());
-}
