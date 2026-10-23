@@ -1,5 +1,6 @@
 const std = @import("std");
-const Source = @import("source.zig").Source;
+
+const Source = @import("../source.zig").Source;
 
 pub const Header = extern struct {
     signature: [8]u8,

@@ -3,9 +3,9 @@ const Difat = @This();
 
 const std = @import("std");
 
-const Cfb = @import("Cfb.zig");
+const Cfb = @import("../Cfb.zig");
 const SectorNumber = @import("SectorNumber.zig").SectorNumber;
-const Source = @import("source.zig").Source;
+const Source = @import("../source.zig").Source;
 
 cfb: *const Cfb,
 

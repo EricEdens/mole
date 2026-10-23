@@ -1,6 +1,6 @@
 const Fat = @This();
 
-const Cfb = @import("Cfb.zig");
+const Cfb = @import("../Cfb.zig");
 const SectorNumber = @import("SectorNumber.zig").SectorNumber;
 
 cfb: *const Cfb,

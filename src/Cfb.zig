@@ -2,10 +2,10 @@ const Cfb = @This();
 
 const std = @import("std");
 
-const Difat = @import("Difat.zig");
-const Fat = @import("Fat.zig");
-const Header = @import("header.zig").Header;
-const SectorNumber = @import("SectorNumber.zig").SectorNumber;
+pub const Difat = @import("Cfb/Difat.zig");
+const Fat = @import("Cfb/Fat.zig");
+const Header = @import("Cfb/header.zig").Header;
+const SectorNumber = @import("Cfb/SectorNumber.zig").SectorNumber;
 const Source = @import("source.zig").Source;
 
 source: Source,
@@ -85,7 +85,7 @@ pub fn readMiniSector(self: *const Cfb, sector: SectorNumber, buf: []u8) ReadErr
 
 comptime {
     _ = Difat;
-    _ = @import("DirectoryEntry.zig");
+    _ = @import("Cfb/DirectoryEntry.zig");
 }
 
 const testing = std.testing;
