@@ -14,11 +14,11 @@ cfb: *const Cfb,
 // that comes from each restart.
 //
 // If you read in random patterns, I don't know. We'll have to measure it.
-cursor: u32,
+cursor: u32 = 0,
 sector: SectorNumber,
 
 pub fn init(cfb: *const Cfb) Difat {
-    return .{ .cfb = cfb, .cursor = 0, .sector = cfb.firstDifat() };
+    return .{ .cfb = cfb, .sector = cfb.firstDifat() };
 }
 
 /// Returns DIFAT[n], the sector number of FAT sector #n.

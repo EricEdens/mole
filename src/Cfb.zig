@@ -85,6 +85,7 @@ pub fn readMiniSector(self: *const Cfb, sector: SectorNumber, buf: []u8) ReadErr
 
 comptime {
     _ = Difat;
+    _ = Fat;
     _ = @import("Cfb/DirectoryEntry.zig");
 }
 
