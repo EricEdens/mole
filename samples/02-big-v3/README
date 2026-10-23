@@ -1,0 +1,2 @@
+323 FAT sectors. This creates 109 DIFAT in the header, and 214 across a
+two-sector DIFAT chain.

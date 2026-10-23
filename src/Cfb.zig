@@ -69,6 +69,15 @@ pub fn readSector(self: *const Cfb, sector: SectorNumber, buf: []u8) ReadError!v
     if (try self.source.readAt(buf, position) != buf.len) return error.EndOfStream;
 }
 
+pub fn readInt(self: *const Cfb, comptime T: type, sector: SectorNumber, idx: u32) ReadError!T {
+    std.debug.assert((@as(u64, idx) + 1) * @sizeOf(T) <= self.bytesPerSector());
+    if (!sector.isRegular()) return error.InvalidSector;
+    var b: [@sizeOf(T)]u8 = undefined;
+    const position = (@as(u64, @backingInt(sector)) + 1) * self.bytesPerSector() + @as(u64, idx) * @sizeOf(T);
+    if (try self.source.readAt(&b, position) != b.len) return error.EndOfStream;
+    return std.mem.readInt(T, &b, .little);
+}
+
 pub fn readMiniSector(self: *const Cfb, sector: SectorNumber, buf: []u8) ReadError!void {
     _ = .{ self, sector, buf };
     @panic("TODO");
