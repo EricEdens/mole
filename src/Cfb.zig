@@ -5,6 +5,8 @@ const std = @import("std");
 pub const Difat = @import("Cfb/Difat.zig");
 const Directory = @import("Cfb/Directory.zig");
 const Fat = @import("Cfb/Fat.zig");
+const MiniFat = @import("Cfb/MiniFat.zig");
+const MiniStream = @import("Cfb/MiniStream.zig");
 const Header = @import("Cfb/header.zig").Header;
 const SectorNumber = @import("Cfb/SectorNumber.zig").SectorNumber;
 const Source = @import("source.zig").Source;
@@ -20,6 +22,7 @@ pub fn open(source: Source) OpenError!Cfb {
     if (!std.mem.eql(u8, &h.signature, &.{ 0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1 }))
         return error.InvalidHeader;
     if (h.byte_order != 0xfffe) return error.InvalidHeader;
+    if (h.mini_sector_shift != 6) return error.InvalidHeader;
     switch (h.major_ver) {
         3 => if (h.sector_shift != 9) return error.InvalidHeader,
         4 => if (h.sector_shift != 12) return error.InvalidHeader,
@@ -75,8 +78,9 @@ pub fn readValue(self: *const Cfb, comptime T: type, sector: SectorNumber, idx: 
     if (!sector.isRegular()) return error.InvalidSector;
     comptime switch (@typeInfo(T)) {
         .int, .@"enum" => {},
+        .array => |a| if (@typeInfo(a.child) != .int) @compileError(@typeName(T) ++ " is not an array of ints"),
         .@"struct" => |s| if (s.layout != .@"extern") @compileError(@typeName(T) ++ " is not extern"),
-        else => @compileError(@typeName(T) ++ " is not an int, enum or extern struct"),
+        else => @compileError(@typeName(T) ++ " is not an int, enum, int array or extern struct"),
     };
     comptime if (512 % @sizeOf(T) != 0) @compileError(@typeName(T) ++ " straddles sectors");
 
@@ -102,6 +106,8 @@ comptime {
     _ = Difat;
     _ = Fat;
     _ = Directory;
+    _ = MiniFat;
+    _ = MiniStream;
 }
 
 const testing = std.testing;
