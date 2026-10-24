@@ -3,7 +3,7 @@ const Directory = @This();
 
 const std = @import("std");
 
-const Cfb = @import("../Cfb.zig");
+const Cfb = @import("../cfb.zig").Cfb;
 const Fat = @import("Fat.zig");
 const SectorNumber = @import("SectorNumber.zig").SectorNumber;
 const StreamId = @import("StreamId.zig").StreamId;
@@ -55,7 +55,7 @@ fn entriesPerSector(self: *const Directory) u32 {
     return self.cfb.bytesPerSector() / @sizeOf(Entry);
 }
 
-const ByteSource = @import("../ByteSource.zig");
+const ByteSource = @import("../io.zig").ByteSource;
 const testing = std.testing;
 
 test "Entry is 128 bytes" {

@@ -178,8 +178,8 @@ const to_upper = [_][2]u16{
 
 const testing = std.testing;
 
-const ByteSource = @import("../ByteSource.zig");
-const Cfb = @import("../Cfb.zig");
+const ByteSource = @import("../io.zig").ByteSource;
+const Cfb = @import("../cfb.zig").Cfb;
 const Directory = @import("Directory.zig");
 
 fn fromUnits(s: []const u16) Name {

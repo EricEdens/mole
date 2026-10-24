@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const ByteSource = @import("../ByteSource.zig");
+const ByteSource = @import("../io.zig").ByteSource;
 
 pub const Header = extern struct {
     signature: [8]u8,

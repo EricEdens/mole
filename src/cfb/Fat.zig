@@ -3,7 +3,7 @@ const Fat = @This();
 
 const std = @import("std");
 
-const Cfb = @import("../Cfb.zig");
+const Cfb = @import("../cfb.zig").Cfb;
 const Difat = @import("Difat.zig");
 const SectorNumber = @import("SectorNumber.zig").SectorNumber;
 
@@ -34,7 +34,7 @@ fn fatPerSector(self: *const Fat) u32 {
     return (self.cfb.bytesPerSector() / @sizeOf(u32));
 }
 
-const ByteSource = @import("../ByteSource.zig");
+const ByteSource = @import("../io.zig").ByteSource;
 const testing = std.testing;
 
 test nextSectorInChain {

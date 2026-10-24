@@ -3,7 +3,7 @@ const Difat = @This();
 
 const std = @import("std");
 
-const Cfb = @import("../Cfb.zig");
+const Cfb = @import("../cfb.zig").Cfb;
 const SectorNumber = @import("SectorNumber.zig").SectorNumber;
 
 cfb: *const Cfb,
@@ -53,7 +53,7 @@ fn difatPerSector(self: *const Difat) u32 {
     return (self.cfb.bytesPerSector() / @sizeOf(u32)) - 1;
 }
 
-const ByteSource = @import("../ByteSource.zig");
+const ByteSource = @import("../io.zig").ByteSource;
 const testing = std.testing;
 
 test fatSectorLocation {

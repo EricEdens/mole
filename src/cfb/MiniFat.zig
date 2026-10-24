@@ -3,7 +3,7 @@ const MiniFat = @This();
 
 const std = @import("std");
 
-const Cfb = @import("../Cfb.zig");
+const Cfb = @import("../cfb.zig").Cfb;
 const Fat = @import("Fat.zig");
 const SectorNumber = @import("SectorNumber.zig").SectorNumber;
 
@@ -38,7 +38,7 @@ fn miniFatPerSector(self: *const MiniFat) u32 {
     return self.cfb.bytesPerSector() / @sizeOf(u32);
 }
 
-const ByteSource = @import("../ByteSource.zig");
+const ByteSource = @import("../io.zig").ByteSource;
 const testing = std.testing;
 
 test nextSectorInChain {

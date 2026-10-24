@@ -3,7 +3,7 @@ const MiniStream = @This();
 
 const std = @import("std");
 
-const Cfb = @import("../Cfb.zig");
+const Cfb = @import("../cfb.zig").Cfb;
 const Directory = @import("Directory.zig");
 const Fat = @import("Fat.zig");
 const SectorNumber = @import("SectorNumber.zig").SectorNumber;
@@ -45,7 +45,7 @@ pub fn readMiniSector(self: *MiniStream, n: SectorNumber) Cfb.ReadError![64]u8 {
     return self.cfb.readValue([64]u8, self.sector, @intCast(offset % self.cfb.bytesPerSector() / 64));
 }
 
-const ByteSource = @import("../ByteSource.zig");
+const ByteSource = @import("../io.zig").ByteSource;
 const MiniFat = @import("MiniFat.zig");
 const testing = std.testing;
 
