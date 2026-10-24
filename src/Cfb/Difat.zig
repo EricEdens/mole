@@ -35,11 +35,11 @@ pub fn fatSectorLocation(self: *Difat, n: u32) Cfb.ReadError!SectorNumber {
 
     while (self.cursor < next_cursor) : (self.cursor += 1) {
         self.sector = .fromInt(
-            try self.cfb.readInt(u32, self.sector, self.difatPerSector()),
+            try self.cfb.readValue(u32, self.sector, self.difatPerSector()),
         );
     }
 
-    return .fromInt(try self.cfb.readInt(u32, self.sector, idx % self.difatPerSector()));
+    return .fromInt(try self.cfb.readValue(u32, self.sector, idx % self.difatPerSector()));
 }
 
 fn hdrLen(self: *const Difat) u32 {

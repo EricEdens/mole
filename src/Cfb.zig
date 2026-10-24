@@ -3,6 +3,7 @@ const Cfb = @This();
 const std = @import("std");
 
 pub const Difat = @import("Cfb/Difat.zig");
+const Directory = @import("Cfb/Directory.zig");
 const Fat = @import("Cfb/Fat.zig");
 const Header = @import("Cfb/header.zig").Header;
 const SectorNumber = @import("Cfb/SectorNumber.zig").SectorNumber;
@@ -69,13 +70,27 @@ pub fn readSector(self: *const Cfb, sector: SectorNumber, buf: []u8) ReadError!v
     if (try self.source.readAt(buf, position) != buf.len) return error.EndOfStream;
 }
 
-pub fn readInt(self: *const Cfb, comptime T: type, sector: SectorNumber, idx: u32) ReadError!T {
-    std.debug.assert((@as(u64, idx) + 1) * @sizeOf(T) <= self.bytesPerSector());
+pub fn readValue(self: *const Cfb, comptime T: type, sector: SectorNumber, idx: u32) ReadError!T {
+    std.debug.assert(idx < self.bytesPerSector() / @sizeOf(T));
     if (!sector.isRegular()) return error.InvalidSector;
-    var b: [@sizeOf(T)]u8 = undefined;
+    comptime switch (@typeInfo(T)) {
+        .int, .@"enum" => {},
+        .@"struct" => |s| if (s.layout != .@"extern") @compileError(@typeName(T) ++ " is not extern"),
+        else => @compileError(@typeName(T) ++ " is not an int, enum or extern struct"),
+    };
+    comptime if (512 % @sizeOf(T) != 0) @compileError(@typeName(T) ++ " straddles sectors");
+
     const position = (@as(u64, @backingInt(sector)) + 1) * self.bytesPerSector() + @as(u64, idx) * @sizeOf(T);
-    if (try self.source.readAt(&b, position) != b.len) return error.EndOfStream;
-    return std.mem.readInt(T, &b, .little);
+    if (position + @sizeOf(T) > self.source.size()) {
+        return error.EndOfStream;
+    }
+
+    var ret: T = undefined;
+    // Safety: Ignoring return value since we checked above that the read
+    // wouldn't be short.
+    _ = try self.source.readAt(std.mem.asBytes(&ret), position);
+    if (@import("builtin").cpu.arch.endian() == .big) std.mem.byteSwap(T, &ret);
+    return ret;
 }
 
 pub fn readMiniSector(self: *const Cfb, sector: SectorNumber, buf: []u8) ReadError!void {
@@ -86,7 +101,7 @@ pub fn readMiniSector(self: *const Cfb, sector: SectorNumber, buf: []u8) ReadErr
 comptime {
     _ = Difat;
     _ = Fat;
-    _ = @import("Cfb/DirectoryEntry.zig");
+    _ = Directory;
 }
 
 const testing = std.testing;

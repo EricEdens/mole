@@ -28,7 +28,7 @@ pub fn nextSectorInChain(self: *Fat, n: SectorNumber) Cfb.ReadError!SectorNumber
         self.cursor = next_cursor;
     }
 
-    return .fromInt(try self.cfb.readInt(u32, self.sector, @backingInt(n) % self.fatPerSector()));
+    return .fromInt(try self.cfb.readValue(u32, self.sector, @backingInt(n) % self.fatPerSector()));
 }
 
 fn fatPerSector(self: *const Fat) u32 {
