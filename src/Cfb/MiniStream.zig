@@ -18,9 +18,12 @@ cursor: u32 = 0,
 sector: SectorNumber,
 
 /// root is Directory[0], whose start_sector and stream_size describe the mini stream.
-pub fn init(cfb: *const Cfb, root: Directory.Entry) MiniStream {
+pub fn init(cfb: *const Cfb) Cfb.ReadError!MiniStream {
+    var dir: Directory = .init(cfb);
+    const root = try dir.directoryEntry(.root);
     const start: SectorNumber = .fromInt(root.start_sector);
-    return .{ .cfb = cfb, .fat = .init(cfb), .start = start, .size = root.stream_size, .sector = start };
+    const size = if (cfb.header.major_ver == 3) root.stream_size & 0xffffffff else root.stream_size;
+    return .{ .cfb = cfb, .fat = .init(cfb), .start = start, .size = size, .sector = start };
 }
 
 /// Returns mini sector #n.
@@ -50,8 +53,7 @@ test readMiniSector {
     var src: Source = try .fromPath(testing.io, "samples/01-ms-cfb/ms-cfb.cfb");
     defer src.deinit();
     const cfb = try Cfb.open(src);
-    var dir: Directory = .init(&cfb);
-    var ms: MiniStream = .init(&cfb, try dir.directoryEntry(.root));
+    var ms: MiniStream = try .init(&cfb);
 
     var expected: [9 * 64]u8 = @splat(0);
     for (expected[0..544], 0..) |*b, i| b.* = "Data for stream 1"[i % 17];
@@ -67,8 +69,7 @@ test "readMiniSector big v3" {
     var src: Source = try .fromPath(testing.io, "samples/02-big-v3/win11-24h2-26100.9549-amd64.cfb");
     defer src.deinit();
     const cfb = try Cfb.open(src);
-    var dir: Directory = .init(&cfb);
-    var ms: MiniStream = .init(&cfb, try dir.directoryEntry(.root));
+    var ms: MiniStream = try .init(&cfb);
 
     var expected: [100]u8 = undefined;
     for (&expected, 0..) |*b, i| b.* = @intCast((i + 4) % 251);
@@ -77,6 +78,25 @@ test "readMiniSector big v3" {
     try testing.expectEqualSlices(u8, expected[64..], (try ms.readMiniSector(.fromInt(1)))[0..36]);
 
     try testing.expectError(error.EndOfStream, ms.readMiniSector(.fromInt(2)));
+}
+
+test "readMiniSector big v3 clears high bits" {
+    const f = try std.Io.Dir.cwd().openFile(testing.io, "samples/03-minifat-v3/win11-24h2-26100.9549-amd64.cfb", .{});
+    defer f.close(testing.io);
+    var reader = f.reader(testing.io, &.{});
+    const bytes = try reader.interface.readAllocShort(testing.allocator, 100 * 1024);
+    defer testing.allocator.free(bytes);
+    var src: Source = .fromSlice(bytes);
+    defer src.deinit();
+    const cfb = try Cfb.open(src);
+    // The directory entry starts at sector 1. We bump it to a size, using the
+    // high bits, such that the code would think we have 5000 minifat entries.
+    var root = std.mem.bytesAsValue(Directory.Entry, bytes[1024..][0..128]);
+    root.stream_size = 0x100000000 | root.stream_size;
+
+    var mini_stream: MiniStream = try .init(&cfb);
+
+    try std.testing.expectError(error.EndOfStream, mini_stream.readMiniSector(.fromInt(5000)));
 }
 
 test "readMiniSector minifat v3" {
@@ -94,7 +114,7 @@ test "readMiniSector minifat v3" {
     const cfb = try Cfb.open(src);
     var dir: Directory = .init(&cfb);
     var mini_fat: MiniFat = .init(&cfb);
-    var ms: MiniStream = .init(&cfb, try dir.directoryEntry(.root));
+    var ms: MiniStream = try .init(&cfb);
 
     for (streams) |e| {
         const d = try dir.directoryEntry(@fromBackingInt(@intCast(e[0])));
