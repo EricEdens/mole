@@ -9,6 +9,7 @@ const Fat = @import("Cfb/Fat.zig");
 const Header = @import("Cfb/header.zig").Header;
 const MiniFat = @import("Cfb/MiniFat.zig");
 const MiniStream = @import("Cfb/MiniStream.zig");
+const Name = @import("Cfb/Name.zig");
 const SectorNumber = @import("Cfb/SectorNumber.zig").SectorNumber;
 
 source: ByteSource,
@@ -93,6 +94,7 @@ comptime {
     _ = Directory;
     _ = MiniFat;
     _ = MiniStream;
+    _ = Name;
 }
 
 const testing = std.testing;
