@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const Source = @import("../source.zig").Source;
+const ByteSource = @import("../ByteSource.zig");
 
 pub const Header = extern struct {
     signature: [8]u8,
@@ -22,14 +22,10 @@ pub const Header = extern struct {
     num_difat: u32,
     difat: [109]u32,
 
-    pub const ReadError = Source.ReadError || error{EndOfStream};
+    pub const ReadError = ByteSource.ReadError;
 
-    pub fn read(s: Source) ReadError!Header {
-        var h: Header = undefined;
-        if (try s.readAt(std.mem.asBytes(&h), 0) != @sizeOf(Header)) return error.EndOfStream;
-        if (@import("builtin").cpu.arch.endian() == .big)
-            std.mem.byteSwap(Header, &h);
-        return h;
+    pub fn read(s: ByteSource) ReadError!Header {
+        return s.readValue(Header, 0);
     }
 };
 
@@ -40,10 +36,10 @@ test "Header is 512 bytes" {
 }
 
 test "read empty v3 Windows 11 header" {
-    var src: Source = try .fromPath(testing.io, "samples/00-empty-v3/win11-24h2-26100.9549-amd64.cfb");
+    var src: ByteSource.Memory = try .fromPath(testing.io, "samples/00-empty-v3/win11-24h2-26100.9549-amd64.cfb");
     defer src.deinit();
 
-    const header = try Header.read(src);
+    const header = try Header.read(src.byteSource());
     try testing.expectEqualDeep(Header{
         .signature = .{ 0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1 },
         .clsid = @splat(0),

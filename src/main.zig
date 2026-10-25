@@ -5,10 +5,10 @@ const stg = @import("stg");
 pub fn main(init: std.process.Init) !void {
     const args = (try init.minimal.args.toSlice(init.arena.allocator()))[1..];
 
-    var src: stg.Source = try .fromPath(init.io, args[0]);
+    var src: stg.ByteSource.Memory = try .fromPath(init.io, args[0]);
     defer src.deinit();
 
-    const cfb = try stg.Cfb.open(src);
+    const cfb = try stg.Cfb.open(src.byteSource());
     std.debug.print("major={d}\n", .{cfb.header.major_ver});
 
     var difat = cfb.difat().sectorIds();

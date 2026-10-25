@@ -2,22 +2,22 @@ const Cfb = @This();
 
 const std = @import("std");
 
+const ByteSource = @import("ByteSource.zig");
 pub const Difat = @import("Cfb/Difat.zig");
 const Directory = @import("Cfb/Directory.zig");
 const Fat = @import("Cfb/Fat.zig");
+const Header = @import("Cfb/header.zig").Header;
 const MiniFat = @import("Cfb/MiniFat.zig");
 const MiniStream = @import("Cfb/MiniStream.zig");
-const Header = @import("Cfb/header.zig").Header;
 const SectorNumber = @import("Cfb/SectorNumber.zig").SectorNumber;
-const Source = @import("source.zig").Source;
 
-source: Source,
+source: ByteSource,
 header: Header,
 
-pub const ReadError = Source.ReadError || error{ InvalidSector, EndOfStream };
+pub const ReadError = ByteSource.ReadError || error{InvalidSector};
 pub const OpenError = Header.ReadError || error{InvalidHeader};
 
-pub fn open(source: Source) OpenError!Cfb {
+pub fn open(source: ByteSource) OpenError!Cfb {
     const h = try Header.read(source);
     if (!std.mem.eql(u8, &h.signature, &.{ 0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1 }))
         return error.InvalidHeader;
@@ -70,31 +70,16 @@ pub fn readSector(self: *const Cfb, sector: SectorNumber, buf: []u8) ReadError!v
     std.debug.assert(buf.len == self.bytesPerSector());
     if (!sector.isRegular()) return error.InvalidSector;
     const position = (@as(u64, @backingInt(sector)) + 1) * buf.len;
-    if (try self.source.readAt(buf, position) != buf.len) return error.EndOfStream;
+    try self.source.readAt(buf, position);
 }
 
 pub fn readValue(self: *const Cfb, comptime T: type, sector: SectorNumber, idx: u32) ReadError!T {
     std.debug.assert(idx < self.bytesPerSector() / @sizeOf(T));
     if (!sector.isRegular()) return error.InvalidSector;
-    comptime switch (@typeInfo(T)) {
-        .int, .@"enum" => {},
-        .array => |a| if (@typeInfo(a.child) != .int) @compileError(@typeName(T) ++ " is not an array of ints"),
-        .@"struct" => |s| if (s.layout != .@"extern") @compileError(@typeName(T) ++ " is not extern"),
-        else => @compileError(@typeName(T) ++ " is not an int, enum, int array or extern struct"),
-    };
     comptime if (512 % @sizeOf(T) != 0) @compileError(@typeName(T) ++ " straddles sectors");
 
     const position = (@as(u64, @backingInt(sector)) + 1) * self.bytesPerSector() + @as(u64, idx) * @sizeOf(T);
-    if (position + @sizeOf(T) > self.source.size()) {
-        return error.EndOfStream;
-    }
-
-    var ret: T = undefined;
-    // Safety: Ignoring return value since we checked above that the read
-    // wouldn't be short.
-    _ = try self.source.readAt(std.mem.asBytes(&ret), position);
-    if (@import("builtin").cpu.arch.endian() == .big) std.mem.byteSwap(T, &ret);
-    return ret;
+    return self.source.readValue(T, position);
 }
 
 pub fn readMiniSector(self: *const Cfb, sector: SectorNumber, buf: []u8) ReadError!void {
@@ -113,11 +98,11 @@ comptime {
 const testing = std.testing;
 
 test "read MS-CFB section 3 example" {
-    var src: Source = try .fromPath(testing.io, "samples/01-ms-cfb/ms-cfb.cfb");
+    var src: ByteSource.Memory = try .fromPath(testing.io, "samples/01-ms-cfb/ms-cfb.cfb");
     defer src.deinit();
-    try testing.expectEqual(3072, src.size());
+    try testing.expectEqual(3072, src.byteSource().size());
 
-    const cfb: Cfb = try .open(src);
+    const cfb: Cfb = try .open(src.byteSource());
     try testing.expectEqualDeep(Header{
         .signature = .{ 0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1 },
         .clsid = @splat(0),

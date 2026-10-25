@@ -6,7 +6,6 @@ const std = @import("std");
 const Cfb = @import("../Cfb.zig");
 const Fat = @import("Fat.zig");
 const SectorNumber = @import("SectorNumber.zig").SectorNumber;
-const Source = @import("../source.zig").Source;
 const StreamId = @import("StreamId.zig").StreamId;
 
 cfb: *const Cfb,
@@ -56,6 +55,7 @@ fn entriesPerSector(self: *const Directory) u32 {
     return self.cfb.bytesPerSector() / @sizeOf(Entry);
 }
 
+const ByteSource = @import("../ByteSource.zig");
 const testing = std.testing;
 
 test "Entry is 128 bytes" {
@@ -80,9 +80,9 @@ test directoryEntry {
         // Forwards
         .{ 5, 0, 0, 0xffffffff, 0xffffffff, 0xffffffff, 0x0, 0 },
     };
-    var src: Source = try .fromPath(testing.io, "samples/02-big-v3/win11-24h2-26100.9549-amd64.cfb");
+    var src: ByteSource.Memory = try .fromPath(testing.io, "samples/02-big-v3/win11-24h2-26100.9549-amd64.cfb");
     defer src.deinit();
-    const cfb = try Cfb.open(src);
+    const cfb = try Cfb.open(src.byteSource());
     var dir: Directory = .init(&cfb);
 
     for (expected) |e| {

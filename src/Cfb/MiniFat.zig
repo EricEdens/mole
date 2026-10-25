@@ -6,7 +6,6 @@ const std = @import("std");
 const Cfb = @import("../Cfb.zig");
 const Fat = @import("Fat.zig");
 const SectorNumber = @import("SectorNumber.zig").SectorNumber;
-const Source = @import("../source.zig").Source;
 
 cfb: *const Cfb,
 fat: Fat,
@@ -39,6 +38,7 @@ fn miniFatPerSector(self: *const MiniFat) u32 {
     return self.cfb.bytesPerSector() / @sizeOf(u32);
 }
 
+const ByteSource = @import("../ByteSource.zig");
 const testing = std.testing;
 
 test nextSectorInChain {
@@ -53,9 +53,9 @@ test nextSectorInChain {
         // Backwards
         .{ 3, 4 },
     };
-    var src: Source = try .fromPath(testing.io, "samples/01-ms-cfb/ms-cfb.cfb");
+    var src: ByteSource.Memory = try .fromPath(testing.io, "samples/01-ms-cfb/ms-cfb.cfb");
     defer src.deinit();
-    const cfb = try Cfb.open(src);
+    const cfb = try Cfb.open(src.byteSource());
     var mini_fat: MiniFat = .init(&cfb);
 
     for (expected) |e| {
@@ -101,9 +101,9 @@ test "nextSectorInChain minifat v3" {
         .{ 570, 0xffffffff },
         .{ 639, 0xffffffff },
     };
-    var src: Source = try .fromPath(testing.io, "samples/03-minifat-v3/win11-24h2-26100.9549-amd64.cfb");
+    var src: ByteSource.Memory = try .fromPath(testing.io, "samples/03-minifat-v3/win11-24h2-26100.9549-amd64.cfb");
     defer src.deinit();
-    const cfb = try Cfb.open(src);
+    const cfb = try Cfb.open(src.byteSource());
     var mini_fat: MiniFat = .init(&cfb);
 
     for (expected) |e| {

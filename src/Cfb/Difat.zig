@@ -5,7 +5,6 @@ const std = @import("std");
 
 const Cfb = @import("../Cfb.zig");
 const SectorNumber = @import("SectorNumber.zig").SectorNumber;
-const Source = @import("../source.zig").Source;
 
 cfb: *const Cfb,
 
@@ -54,6 +53,7 @@ fn difatPerSector(self: *const Difat) u32 {
     return (self.cfb.bytesPerSector() / @sizeOf(u32)) - 1;
 }
 
+const ByteSource = @import("../ByteSource.zig");
 const testing = std.testing;
 
 test fatSectorLocation {
@@ -85,9 +85,9 @@ test fatSectorLocation {
         .{ 108, 0x35fd },
         .{ 236, 0x75fe },
     };
-    var src: Source = try .fromPath(testing.io, "samples/02-big-v3/win11-24h2-26100.9549-amd64.cfb");
+    var src: ByteSource.Memory = try .fromPath(testing.io, "samples/02-big-v3/win11-24h2-26100.9549-amd64.cfb");
     defer src.deinit();
-    const cfb = try Cfb.open(src);
+    const cfb = try Cfb.open(src.byteSource());
     var difat: Difat = .init(&cfb);
 
     for (expected) |e| {
