@@ -1,7 +1,7 @@
 .{
-    .name = .structured_storage,
+    .name = .mole,
     .version = "0.0.0",
-    .fingerprint = 0xdd53060c31948b0c,
+    .fingerprint = 0x5f13cda31e68f88c,
     .minimum_zig_version = "0.17.0",
     .dependencies = .{},
     .paths = .{

@@ -1,4 +1,5 @@
-# structured_storage
+# mole
+molé, as in more than just olé. OLE32.
 
 A cross-platform implementation of Microsoft's 
 [Structured Storage](https://learn.microsoft.com/en-us/windows/win32/Stg/structured-storage-start-page).
