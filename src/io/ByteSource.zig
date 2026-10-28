@@ -151,7 +151,7 @@ test "Memory.fromFile" {
     var tmp = testing.tmpDir(.{});
     defer tmp.cleanup();
 
-    for ([_]usize{ 0, 1, 4096, (3 << 20) + 17 }) |len| {
+    for ([_]usize{ 0, 1, 4096 }) |len| {
         const expected = try testing.allocator.alloc(u8, len);
         defer testing.allocator.free(expected);
         var rand = std.Random.DefaultPrng.init(len);

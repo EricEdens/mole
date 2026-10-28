@@ -3,7 +3,7 @@ const Fat = @This();
 
 const std = @import("std");
 
-const Cfb = @import("../cfb.zig").Cfb;
+const Cfb = @import("Cfb.zig");
 const Difat = @import("Difat.zig");
 const SectorNumber = @import("SectorNumber.zig").SectorNumber;
 
@@ -13,7 +13,7 @@ cursor: u32 = 0,
 sector: SectorNumber,
 
 pub fn init(cfb: *const Cfb) Fat {
-    return .{ .cfb = cfb, .difat = .init(cfb), .sector = .fromInt(cfb.header.difat[0]) };
+    return .{ .cfb = cfb, .difat = .init(cfb), .sector = cfb.difat[0] };
 }
 
 /// Returns FAT[n], the next sector number in the chain after sector #n.
@@ -35,6 +35,7 @@ fn fatPerSector(self: *const Fat) u32 {
 }
 
 const ByteSource = @import("../io.zig").ByteSource;
+const testOpen = @import("../cfb.zig").testOpen;
 const testing = std.testing;
 
 test nextSectorInChain {
@@ -78,7 +79,7 @@ test nextSectorInChain {
     };
     var src: ByteSource.Memory = try .fromPath(testing.io, "samples/02-big-v3/win11-24h2-26100.9549-amd64.cfb");
     defer src.deinit();
-    const cfb = try Cfb.open(src.byteSource());
+    const cfb = try testOpen(&src);
     var fat: Fat = .init(&cfb);
 
     for (expected) |e| {

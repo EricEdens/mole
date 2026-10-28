@@ -3,7 +3,7 @@ const Difat = @This();
 
 const std = @import("std");
 
-const Cfb = @import("../cfb.zig").Cfb;
+const Cfb = @import("Cfb.zig");
 const SectorNumber = @import("SectorNumber.zig").SectorNumber;
 
 cfb: *const Cfb,
@@ -17,7 +17,7 @@ cursor: u32 = 0,
 sector: SectorNumber,
 
 pub fn init(cfb: *const Cfb) Difat {
-    return .{ .cfb = cfb, .sector = cfb.firstDifat() };
+    return .{ .cfb = cfb, .sector = cfb.first_difat };
 }
 
 /// Returns DIFAT[n], the sector number of FAT sector #n.
@@ -29,7 +29,7 @@ pub fn fatSectorLocation(self: *Difat, n: u32) Cfb.ReadError!SectorNumber {
 
     if (next_cursor < self.cursor) {
         self.cursor = 0;
-        self.sector = self.cfb.firstDifat();
+        self.sector = self.cfb.first_difat;
     }
 
     while (self.cursor < next_cursor) : (self.cursor += 1) {
@@ -42,11 +42,11 @@ pub fn fatSectorLocation(self: *Difat, n: u32) Cfb.ReadError!SectorNumber {
 }
 
 fn hdrLen(self: *const Difat) u32 {
-    return @intCast(self.cfb.header.difat.len);
+    return self.cfb.difat.len;
 }
 
 fn hdrDifat(self: *const Difat, n: u32) ?SectorNumber {
-    return if (n < self.hdrLen()) SectorNumber.fromInt(self.cfb.header.difat[n]) else null;
+    return if (n < self.hdrLen()) self.cfb.difat[n] else null;
 }
 
 fn difatPerSector(self: *const Difat) u32 {
@@ -54,6 +54,7 @@ fn difatPerSector(self: *const Difat) u32 {
 }
 
 const ByteSource = @import("../io.zig").ByteSource;
+const testOpen = @import("../cfb.zig").testOpen;
 const testing = std.testing;
 
 test fatSectorLocation {
@@ -87,7 +88,7 @@ test fatSectorLocation {
     };
     var src: ByteSource.Memory = try .fromPath(testing.io, "samples/02-big-v3/win11-24h2-26100.9549-amd64.cfb");
     defer src.deinit();
-    const cfb = try Cfb.open(src.byteSource());
+    const cfb = try testOpen(&src);
     var difat: Difat = .init(&cfb);
 
     for (expected) |e| {

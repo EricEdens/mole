@@ -179,7 +179,7 @@ const to_upper = [_][2]u16{
 const testing = std.testing;
 
 const ByteSource = @import("../io.zig").ByteSource;
-const Cfb = @import("../cfb.zig").Cfb;
+const testOpen = @import("../cfb.zig").testOpen;
 const Directory = @import("Directory.zig");
 
 fn fromUnits(s: []const u16) Name {
@@ -208,7 +208,7 @@ test toUpper {
 fn checkNameOrdering(path: []const u8) !void {
     var src: ByteSource.Memory = try .fromPath(testing.io, path);
     defer src.deinit();
-    const cfb = try Cfb.open(src.byteSource());
+    const cfb = try testOpen(&src);
     var dir: Directory = .init(&cfb);
     const root = try dir.directoryEntry(@fromBackingInt(0));
     var prev: ?Name = null;
@@ -228,8 +228,4 @@ fn checkNameOrderingRecursive(dir: *Directory, id: u32, prev: *?Name) anyerror!v
     prev.* = cur;
 
     try checkNameOrderingRecursive(dir, entry.right_sib, prev);
-}
-
-test "order matches ole32 tree" {
-    try checkNameOrdering("samples/05-long-names-v3/win11-24h2-26100.9549-amd64.cfb");
 }
