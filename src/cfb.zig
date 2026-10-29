@@ -10,6 +10,14 @@ const OpenError = error{
     ReadFailed,
     ParseCfb,
 
+    /// STG_E_DOCFILECORRUPT
+    CorruptCfb,
+
+    /// The major version is larger than 4.
+    ///
+    /// This check is locked to `STG_E_OLDDLL`.
+    UnsupportedVersion,
+
     /// The file isn't a CFB!
     ///
     /// Concretely, the signature doesn't match, or the header has fewer
@@ -20,6 +28,7 @@ const OpenError = error{
 };
 
 pub fn open(source: ByteSource) OpenError!Cfb {
+    // Phase 1: Is it plausibly a CFB file?
     var h: [512]u8 = undefined;
     source.readAt(&h, 0) catch |err| {
         switch (err) {
@@ -29,24 +38,24 @@ pub fn open(source: ByteSource) OpenError!Cfb {
     };
     if (!std.mem.eql(u8, h[0..8], &.{ 0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1 }))
         return error.NotCfb;
-    if (le(u16, &h, 0x1c) != 0xfffe) return error.ParseCfb;
-    if (le(u16, &h, 0x20) != 6) return error.ParseCfb;
-    const sector_shift = le(u16, &h, 0x1e);
-    const version: Cfb.Version = switch (le(u16, &h, 0x1a)) {
-        3 => if (sector_shift == 9) .v3 else return error.ParseCfb,
-        4 => if (sector_shift == 12) .v4 else return error.ParseCfb,
-        else => return error.ParseCfb,
+
+    // Phase 2: Version check.
+    if (le(u16, &h, 0x1a) > 4) return error.UnsupportedVersion;
+    const version: Cfb.Version = switch (le(u16, &h, 0x1e)) {
+        9 => .v3,
+        12 => .v4,
+        else => return error.CorruptCfb,
     };
     var cfb: Cfb = .{
         .source = source,
         .version = version,
-        .first_dir = SectorNumber.fromInt(le(u32, &h, 0x30)),
-        .first_mini_fat = SectorNumber.fromInt(le(u32, &h, 0x3c)),
-        .first_difat = SectorNumber.fromInt(le(u32, &h, 0x44)),
+        .first_dir = .fromInt(le(u32, &h, 0x30)),
+        .first_mini_fat = .fromInt(le(u32, &h, 0x3c)),
+        .first_difat = .fromInt(le(u32, &h, 0x44)),
         .difat = undefined,
     };
     for (&cfb.difat, 0..) |*e, i|
-        e.* = SectorNumber.fromInt(le(u32, &h, 0x4c + i * 4));
+        e.* = .fromInt(le(u32, &h, 0x4c + i * 4));
     return cfb;
 }
 
@@ -115,4 +124,31 @@ test "given a bad signature, open returns NotCfb" {
     h[7] = h[7] + 2;
     var src: ByteSource.Memory = .fromSlice(&h);
     try testing.expectError(error.NotCfb, testOpen(&src));
+}
+
+test "given a major version above 4, open returns UnsupportedVersion" {
+    var h = try validHeader();
+    for ([_]u16{ 5, 0xffff }) |v| {
+        std.mem.writeInt(u16, h[0x1a..][0..2], v, .little);
+        var src: ByteSource.Memory = .fromSlice(&h);
+        try testing.expectError(error.UnsupportedVersion, testOpen(&src));
+    }
+}
+
+test "given any major version up to 4, open takes the version from the sector shift" {
+    var h = try validHeader();
+    for ([_]u16{ 0, 2, 4 }) |v| {
+        std.mem.writeInt(u16, h[0x1a..][0..2], v, .little);
+        var src: ByteSource.Memory = .fromSlice(&h);
+        try testing.expectEqual(.v3, (try testOpen(&src)).version);
+    }
+}
+
+test "given any byte order, open succeeds" {
+    var h = try validHeader();
+    for ([_]u16{ 0, 0xfeff }) |v| {
+        std.mem.writeInt(u16, h[0x1c..][0..2], v, .little);
+        var src: ByteSource.Memory = .fromSlice(&h);
+        _ = try testOpen(&src);
+    }
 }
