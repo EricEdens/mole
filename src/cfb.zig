@@ -39,13 +39,18 @@ pub fn open(source: ByteSource) OpenError!Cfb {
     if (!std.mem.eql(u8, h[0..8], &.{ 0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1 }))
         return error.NotCfb;
 
-    // Phase 2: Version check.
+    // Phase 2: Major versions.
     if (le(u16, &h, 0x1a) > 4) return error.UnsupportedVersion;
     const version: Cfb.Version = switch (le(u16, &h, 0x1e)) {
         9 => .v3,
         12 => .v4,
         else => return error.CorruptCfb,
     };
+
+    // Phase 3: Shifts.
+    if (le(u16, &h, 0x20) != 6) return error.CorruptCfb;
+    if (version == .v4 and le(u32, &h, 0x38) != 4096) return error.CorruptCfb;
+
     var cfb: Cfb = .{
         .source = source,
         .version = version,
@@ -56,7 +61,48 @@ pub fn open(source: ByteSource) OpenError!Cfb {
     };
     for (&cfb.difat, 0..) |*e, i|
         e.* = .fromInt(le(u32, &h, 0x4c + i * 4));
+
+    // Phase 4: Declared lengths.
+    const total_sectors = source.size() / cfb.bytesPerSector() -| 1;
+    const num_dirs = le(u32, &h, 0x28);
+    const num_fat = le(u32, &h, 0x2c);
+    const num_mini_fat = le(u32, &h, 0x40);
+    const num_difat = le(u32, &h, 0x48);
+    const header_fat = @min(num_fat, cfb.difat.len);
+
+    //  - 4a: NumDirs
+    if (version == .v3 and num_dirs != 0) return error.CorruptCfb;
+    if (version == .v4 and (num_dirs == 0 or num_dirs > total_sectors)) return error.CorruptCfb;
+
+    //  - 4b: Fat
+    if (num_fat > total_sectors) return error.CorruptCfb;
+    for (cfb.difat[0..header_fat]) |e|
+        if (!inFile(e, total_sectors)) return error.CorruptCfb;
+
+    //  - 4c: Difat
+    for (cfb.difat[header_fat..]) |e|
+        if (e != .free) return error.CorruptCfb;
+    if (num_fat > cfb.difat.len and num_difat == 0) return error.CorruptCfb;
+    try chainStart(cfb.first_difat, num_difat, total_sectors);
+
+    //  - 4d: Mini
+    try chainStart(cfb.first_mini_fat, num_mini_fat, total_sectors);
+
+    //  -  4e: FirstDir
+    if (!inFile(cfb.first_dir, total_sectors)) return error.CorruptCfb;
+
     return cfb;
+}
+
+fn inFile(sector: SectorNumber, total_sectors: u64) bool {
+    return sector.isRegular() and @backingInt(sector) < total_sectors;
+}
+
+fn chainStart(first: SectorNumber, num: u32, total_sectors: u64) error{CorruptCfb}!void {
+    if (num > total_sectors) return error.CorruptCfb;
+    if (num == 0) {
+        if (first != .endofchain and first != .free) return error.CorruptCfb;
+    } else if (!inFile(first, total_sectors)) return error.CorruptCfb;
 }
 
 fn le(comptime T: type, h: *const [512]u8, off: usize) T {
@@ -105,10 +151,10 @@ test "read MS-CFB section 3 example" {
     try testing.expectEqual(64, cfb.bytesPerMiniSector());
 }
 
-fn validHeader() ![512]u8 {
+fn validHeader() ![1536]u8 {
     var src: ByteSource.Memory = try .fromPath(testing.io, "samples/00-empty-v3/win11-24h2-26100.9549-amd64.cfb");
     defer src.deinit();
-    var h: [512]u8 = undefined;
+    var h: [1536]u8 = undefined;
     try src.byteSource().readAt(&h, 0);
     return h;
 }
