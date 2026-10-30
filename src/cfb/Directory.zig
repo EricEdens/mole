@@ -33,6 +33,14 @@ pub fn init(cfb: *const Cfb) Directory {
     return .{ .cfb = cfb, .fat = .init(cfb), .sector = cfb.first_dir };
 }
 
+pub fn validate(cfb: *const Cfb, num_dirs: u32) !void {
+    switch (cfb.version) {
+        .v3 => if (num_dirs != 0) return error.V3DirCountNotZero,
+        .v4 => if (num_dirs == 0 or num_dirs > cfb.numSectors()) return error.BadV4DirCount,
+    }
+    if (!cfb.inFile(cfb.first_dir)) return error.FirstDirSectorOutOfFile;
+}
+
 /// Returns Directory[id], the directory entry with stream ID #id.
 pub fn directoryEntry(self: *Directory, id: StreamId) Cfb.ReadError!Entry {
     if (!id.isRegular()) return error.InvalidSector;

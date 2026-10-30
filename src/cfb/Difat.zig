@@ -20,6 +20,16 @@ pub fn init(cfb: *const Cfb) Difat {
     return .{ .cfb = cfb, .sector = cfb.first_difat };
 }
 
+pub fn validate(cfb: *const Cfb, num_difat: u32) !void {
+    for (cfb.difat[@min(cfb.num_fat, cfb.difat.len)..]) |e|
+        if (e != .free) return error.UnusedHeaderDifatNotFree;
+    if (cfb.num_fat > cfb.difat.len and num_difat == 0) return error.MissingDifatSectors;
+    if (num_difat > cfb.numSectors()) return error.TooManyDifatSectors;
+    if (num_difat == 0) {
+        if (cfb.first_difat != .endofchain and cfb.first_difat != .free) return error.UnexpectedFirstDifatSector;
+    } else if (!cfb.inFile(cfb.first_difat)) return error.FirstDifatSectorOutOfFile;
+}
+
 /// Returns DIFAT[n], the sector number of FAT sector #n.
 pub fn fatSectorLocation(self: *Difat, n: u32) Cfb.ReadError!SectorNumber {
     if (self.hdrDifat(n)) |s| return s;

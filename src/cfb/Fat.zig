@@ -16,18 +16,39 @@ pub fn init(cfb: *const Cfb) Fat {
     return .{ .cfb = cfb, .difat = .init(cfb), .sector = cfb.difat[0] };
 }
 
+pub fn validate(cfb: *const Cfb) !void {
+    if (cfb.num_fat > cfb.numSectors()) return error.TooManyFatSectors;
+    for (cfb.difat[0..@min(cfb.num_fat, cfb.difat.len)]) |e|
+        if (!cfb.inFile(e)) return error.HeaderFatSectorOutOfFile;
+}
+
 /// Returns FAT[n], the next sector number in the chain after sector #n.
 pub fn nextSectorInChain(self: *Fat, n: SectorNumber) Cfb.ReadError!SectorNumber {
     if (!n.isRegular()) return error.InvalidSector;
 
     const next_cursor = @backingInt(n) / self.fatPerSector();
+    if (next_cursor >= self.cfb.num_fat) return error.SectorBeyondFat;
 
     if (next_cursor != self.cursor) {
         self.sector = try self.difat.fatSectorLocation(next_cursor);
         self.cursor = next_cursor;
     }
 
-    return .fromInt(try self.cfb.readValue(u32, self.sector, @backingInt(n) % self.fatPerSector()));
+    const next: SectorNumber = .fromInt(try self.cfb.readValue(u32, self.sector, @backingInt(n) % self.fatPerSector()));
+    if (next == n) return error.SelfLoop;
+    return next;
+}
+
+pub fn chainLength(self: *Fat, start: SectorNumber) (Cfb.ReadError || error{ChainTooLong})!u64 {
+    const max = (@as(u64, self.cfb.num_fat) + 1) * self.fatPerSector();
+    var n: u64 = 0;
+    var s = start;
+    while (s != .endofchain) {
+        s = try self.nextSectorInChain(s);
+        n += 1;
+        if (n > max) return error.ChainTooLong;
+    }
+    return n;
 }
 
 fn fatPerSector(self: *const Fat) u32 {

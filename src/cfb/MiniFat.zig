@@ -16,6 +16,13 @@ pub fn init(cfb: *const Cfb) MiniFat {
     return .{ .cfb = cfb, .fat = .init(cfb), .sector = cfb.first_mini_fat };
 }
 
+pub fn validate(cfb: *const Cfb, num_mini: u32) !void {
+    if (num_mini > cfb.numSectors()) return error.TooManyMiniFatSectors;
+    if (num_mini == 0) {
+        if (cfb.first_mini_fat != .endofchain and cfb.first_mini_fat != .free) return error.UnexpectedFirstMiniFatSector;
+    } else if (!cfb.inFile(cfb.first_mini_fat)) return error.FirstMiniFatSectorOutOfFile;
+}
+
 /// Returns MiniFAT[n], the next mini sector number in the chain after mini sector #n.
 pub fn nextSectorInChain(self: *MiniFat, n: SectorNumber) Cfb.ReadError!SectorNumber {
     if (!n.isRegular()) return error.InvalidSector;

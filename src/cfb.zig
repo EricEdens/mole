@@ -3,6 +3,10 @@ const Allocator = std.mem.Allocator;
 
 const ByteSource = @import("io.zig").ByteSource;
 pub const Cfb = @import("cfb/Cfb.zig");
+const Difat = @import("cfb/Difat.zig");
+const Directory = @import("cfb/Directory.zig");
+const Fat = @import("cfb/Fat.zig");
+const MiniFat = @import("cfb/MiniFat.zig");
 const SectorNumber = @import("cfb/SectorNumber.zig").SectorNumber;
 
 pub fn open(source: ByteSource) !Cfb {
@@ -12,52 +16,27 @@ pub fn open(source: ByteSource) !Cfb {
             error.ReadFailed => return error.HeaderReadFailed,
         }
     };
-
     const cfb: Cfb = .{
         .source = source,
-        .version =  try h.validate(),
+        .version = try h.validate(),
         .first_dir = .fromInt(h.first_dir),
         .first_mini_fat = .fromInt(h.first_mini),
         .first_difat = .fromInt(h.first_difat),
+        .num_fat = h.num_fat,
         .difat = @bitCast(h.difat),
     };
+    try Difat.validate(&cfb, h.num_difat);
+    try Fat.validate(&cfb);
+    try Directory.validate(&cfb, h.num_dirs);
+    try MiniFat.validate(&cfb, h.num_mini);
 
-    // Phase 4: Declared lengths.
-    const total_sectors = source.size() / cfb.bytesPerSector() -| 1;
-    const header_fat = @min(h.num_fat, cfb.difat.len);
-
-    //  - 4a: NumDirs
-    if (cfb.version == .v3 and h.num_dirs != 0) return error.V3DirCountNotZero;
-    if (cfb.version == .v4 and (h.num_dirs == 0 or h.num_dirs > total_sectors)) return error.BadV4DirCount;
-
-    //  - 4b: Fat
-    if (h.num_fat > total_sectors) return error.TooManyFatSectors;
-    for (cfb.difat[0..header_fat]) |e|
-        if (!inFile(e, total_sectors)) return error.HeaderFatSectorOutOfFile;
-
-    //  - 4c: Difat
-    for (cfb.difat[header_fat..]) |e|
-        if (e != .free) return error.UnusedHeaderDifatNotFree;
-    if (h.num_fat > cfb.difat.len and h.num_difat == 0) return error.MissingDifatSectors;
-    if (h.num_difat > total_sectors) return error.TooManyDifatSectors;
-    if (h.num_difat == 0) {
-        if (cfb.first_difat != .endofchain and cfb.first_difat != .free) return error.UnexpectedFirstDifatSector;
-    } else if (!inFile(cfb.first_difat, total_sectors)) return error.FirstDifatSectorOutOfFile;
-
-    //  - 4d: Mini
-    if (h.num_mini > total_sectors) return error.TooManyMiniFatSectors;
-    if (h.num_mini == 0) {
-        if (cfb.first_mini_fat != .endofchain and cfb.first_mini_fat != .free) return error.UnexpectedFirstMiniFatSector;
-    } else if (!inFile(cfb.first_mini_fat, total_sectors)) return error.FirstMiniFatSectorOutOfFile;
-
-    //  -  4e: FirstDir
-    if (!inFile(cfb.first_dir, total_sectors)) return error.FirstDirSectorOutOfFile;
-
+    if (cfb.version == .v3) {
+        var fat: Fat = .init(&cfb);
+        _ = try fat.chainLength(cfb.first_dir);
+    }
+    var dir: Directory = .init(&cfb);
+    if ((try dir.directoryEntry(.root)).obj_type != 5) return error.BadRootType;
     return cfb;
-}
-
-fn inFile(sector: SectorNumber, total_sectors: u64) bool {
-    return sector.isRegular() and @backingInt(sector) < total_sectors;
 }
 
 comptime {

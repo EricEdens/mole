@@ -41,13 +41,14 @@ pub const Header = extern struct {
     }
 };
 
-pub const ReadError = ByteSource.ReadError || error{InvalidSector};
+pub const ReadError = ByteSource.ReadError || error{ InvalidSector, SectorBeyondFat, SelfLoop };
 
 source: ByteSource,
 version: Version,
 first_dir: SectorNumber,
 first_mini_fat: SectorNumber,
 first_difat: SectorNumber,
+num_fat: u32,
 difat: [109]SectorNumber,
 
 //-- Logical Stats --//
@@ -67,8 +68,12 @@ pub fn bytesPerMiniSector(_: *const Cfb) u32 {
     return 64;
 }
 
-pub fn numSectors(self: *const Cfb) u32 {
-    std.math.divCeil(u32, self.source.size() - self.bytesPerSector(), self.bytesPerSector());
+pub fn numSectors(self: *const Cfb) u64 {
+    return self.source.size() / self.bytesPerSector() -| 1;
+}
+
+pub fn inFile(self: *const Cfb, sector: SectorNumber) bool {
+    return sector.isRegular() and @backingInt(sector) < self.numSectors();
 }
 
 //-- IO --//
