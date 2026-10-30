@@ -6,6 +6,41 @@ const SectorNumber = @import("SectorNumber.zig").SectorNumber;
 
 pub const Version = enum { v3, v4 };
 
+pub const Header = extern struct {
+    signature: [8]u8,
+    clsid: [16]u8,
+    minor: u16,
+    major: u16,
+    byte_order: u16,
+    shift: u16,
+    mini_shift: u16,
+    reserved: [6]u8,
+    num_dirs: u32,
+    num_fat: u32,
+    first_dir: u32,
+    txn: u32,
+    mini_cutoff: u32,
+    first_mini: u32,
+    num_mini: u32,
+    first_difat: u32,
+    num_difat: u32,
+    difat: [109]u32,
+
+    pub fn validate(h: *const Header) !Version {
+        if (!std.mem.eql(u8, &h.signature, &.{ 0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1 }))
+            return error.SignatureMismatch;
+        if (h.major > 4) return error.VersionGreaterThan4;
+        const version: Version = switch (h.shift) {
+            9 => .v3,
+            12 => .v4,
+            else => return error.BadMajorShift,
+        };
+        if (h.mini_shift != 6) return error.BadMiniShift;
+        if (version == .v4 and h.mini_cutoff != 4096) return error.BadV4MiniCutoff;
+        return version;
+    }
+};
+
 pub const ReadError = ByteSource.ReadError || error{InvalidSector};
 
 source: ByteSource,
